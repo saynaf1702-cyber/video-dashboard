@@ -1,4 +1,3 @@
-cat > README.md << 'ENDOFFILE'
 # 🖥️ Node.js Backend — Video Analytics AI
 
 Real-time backend server & dashboard for AI-based video analytics system — built to work with any CCTV-enabled environment.
@@ -57,26 +56,30 @@ This system can be applied to various environments that require CCTV-based AI su
 ---
 
 ## 🏗️ System Architecture
+
+```
 CCTV Camera
-│
-▼
+    │
+    ▼
 Python AI Edge Device (separate repo)
 ├── YOLOv8          → People Detection
 ├── InsightFace     → Face Recognition
 ├── Line Crossing   → Entry/Exit Counting
 ├── Flask Server    → MJPEG Stream + REST API
 └── Frame Buffer    → Clip Recording
-│
-▼
+    │
+    ▼
 Node.js Backend Server (this repo)
 ├── REST API        → Receive detections from Python
 ├── PostgreSQL      → Store reports & recordings
 ├── Socket.io       → Push updates to dashboard
 └── Dashboard UI    → Real-time monitoring
----
+```
 
 ## 📁 Project Structure
-video-dashboard/
+
+```
+video_analytics/
 ├── views/
 │   ├── index.ejs          # Main dashboard page
 │   └── login.ejs          # Login page
@@ -89,6 +92,7 @@ video-dashboard/
 ├── package.json           # Project dependencies
 ├── .env.example           # Environment variable template
 └── .gitignore             # Files ignored by Git
+```
 ---
 
 ## ⚙️ Installation
@@ -112,17 +116,21 @@ nano .env
 
 Fill in the values:
 ```env
+# Database
 DB_USER=postgres
 DB_HOST=localhost
 DB_DATABASE=video_analytics
 DB_PASSWORD=your_password_here
 DB_PORT=5432
 
+# Server
 PORT=3000
 SERVER_IP=your_server_ip
 
+# Security
 SESSION_SECRET=your_secret_key_here
 
+# Python AI Server
 PYTHON_SERVER_URL=http://your_python_server_ip:5000
 ```
 
@@ -136,6 +144,7 @@ CREATE DATABASE video_analytics;
 
 ### 5. Create Login User
 ```bash
+# Add user to database first, then hash the password
 node hash-password.js
 ```
 
@@ -151,6 +160,7 @@ npx nodemon server.js
 ### 7. Access the Dashboard
 Open your browser and go to:
 http://your_server_ip:3000/dashboard
+
 ---
 
 ## 🐳 Docker Deployment
@@ -204,6 +214,12 @@ docker-compose logs -f node
 
 ---
 
+## 📸 Screenshots
+![Live Stream](dashboard/login.png)
+![Detection](dashboard/dashboard.png)
+
+---
+
 ## 🔗 Related Repository
 
 This project works together with the **Python AI Edge Device** (separate repository) that handles:
@@ -215,7 +231,7 @@ This project works together with the **Python AI Edge Device** (separate reposit
 
 ## 👩‍💻 Author
 
-**Sayyida** — Node.js Backend & Dashboard  
+**Sayyida** — Node.js Backend & Dashboard
 Internship at ISR Lab, PT. Telkom Indonesia — 2026
 
 ---
@@ -225,6 +241,3 @@ Internship at ISR Lab, PT. Telkom Indonesia — 2026
 - [Socket.io Documentation](https://socket.io/docs)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs)
 - [FFmpeg Documentation](https://ffmpeg.org/documentation.html)
-ENDOFFILE
-
-
