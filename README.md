@@ -1,4 +1,4 @@
-cat > README.md << 'EOF'
+cat > README.md << 'ENDOFFILE'
 # 🖥️ Node.js Backend — Video Analytics AI
 
 Real-time backend server & dashboard for AI-based video analytics system — built to work with any CCTV-enabled environment.
@@ -57,30 +57,26 @@ This system can be applied to various environments that require CCTV-based AI su
 ---
 
 ## 🏗️ System Architecture
-
-\`\`\`
 CCTV Camera
-    │
-    ▼
+│
+▼
 Python AI Edge Device (separate repo)
 ├── YOLOv8          → People Detection
 ├── InsightFace     → Face Recognition
 ├── Line Crossing   → Entry/Exit Counting
 ├── Flask Server    → MJPEG Stream + REST API
 └── Frame Buffer    → Clip Recording
-    │
-    ▼
+│
+▼
 Node.js Backend Server (this repo)
 ├── REST API        → Receive detections from Python
 ├── PostgreSQL      → Store reports & recordings
 ├── Socket.io       → Push updates to dashboard
 └── Dashboard UI    → Real-time monitoring
-\`\`\`
+---
 
 ## 📁 Project Structure
-
-\`\`\`
-video_analytics/
+video-dashboard/
 ├── views/
 │   ├── index.ejs          # Main dashboard page
 │   └── login.ejs          # Login page
@@ -93,80 +89,73 @@ video_analytics/
 ├── package.json           # Project dependencies
 ├── .env.example           # Environment variable template
 └── .gitignore             # Files ignored by Git
-\`\`\`
-
 ---
 
 ## ⚙️ Installation
 
 ### 1. Clone the Repository
-\`\`\`bash
+```bash
 git clone https://github.com/saynaf1702-cyber/video-dashboard.git
 cd video-dashboard
-\`\`\`
+```
 
 ### 2. Install Dependencies
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 ### 3. Setup Environment Variables
-\`\`\`bash
+```bash
 cp .env.example .env
 nano .env
-\`\`\`
+```
 
 Fill in the values:
-\`\`\`env
-# Database
+```env
 DB_USER=postgres
 DB_HOST=localhost
 DB_DATABASE=video_analytics
 DB_PASSWORD=your_password_here
 DB_PORT=5432
 
-# Server
 PORT=3000
 SERVER_IP=your_server_ip
 
-# Security
 SESSION_SECRET=your_secret_key_here
 
-# Python AI Server
 PYTHON_SERVER_URL=http://your_python_server_ip:5000
-\`\`\`
+```
 
 ### 4. Setup PostgreSQL Database
-\`\`\`bash
+```bash
 psql -U postgres
 CREATE DATABASE video_analytics;
 \q
-\`\`\`
+```
 > Tables will be created automatically when the server starts for the first time.
 
 ### 5. Create Login User
-\`\`\`bash
+```bash
 node hash-password.js
-\`\`\`
+```
 
 ### 6. Run the Server
-\`\`\`bash
+```bash
 # Normal mode
 node server.js
 
 # Development mode (auto-restart)
 npx nodemon server.js
-\`\`\`
+```
 
 ### 7. Access the Dashboard
 Open your browser and go to:
 http://your_server_ip:3000/dashboard
-
 ---
 
 ## 🐳 Docker Deployment
 
-\`\`\`bash
+```bash
 # Build and run all services
 docker-compose up -d
 
@@ -175,7 +164,7 @@ docker-compose ps
 
 # View logs
 docker-compose logs -f node
-\`\`\`
+```
 
 ---
 
@@ -183,19 +172,19 @@ docker-compose logs -f node
 
 ### Detection Flow
 1. Python AI detects a person via CCTV stream
-2. Python sends detection data to \`/report-anomaly\`
+2. Python sends detection data to `/report-anomaly`
 3. Node.js stores the report in PostgreSQL
 4. Socket.io pushes the update to all open dashboards in real-time
 
 ### Anomaly Clip Flow
 1. Python detects an unknown face or line crossing event
-2. Python saves a 10-second clip and notifies \`/notify-clip\`
+2. Python saves a 10-second clip and notifies `/notify-clip`
 3. Node.js converts the clip URL to a proxy URL
 4. Dashboard shows a "View Clip" button — click to play the video
 
 ### Line Crossing Counter
 1. Python tracks each person crossing a virtual boundary line
-2. Direction (\`masuk\`/\`keluar\`) is sent along with the detection report
+2. Direction (`masuk`/`keluar`) is sent along with the detection report
 3. Dashboard counters update in real-time via Socket.io
 
 ---
@@ -204,14 +193,14 @@ docker-compose logs -f node
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | \`/report-anomaly\` | Receive detection report from Python AI |
-| POST | \`/upload-video\` | Receive video file upload from Python AI |
-| POST | \`/notify-clip\` | Receive clip-ready notification from Python AI |
-| GET | \`/proxy-clip?url=\` | Proxy video stream from Python server |
-| GET | \`/dashboard\` | Main dashboard page |
-| GET | \`/api/health\` | Server health check |
-| PATCH | \`/detections/:id/status\` | Update detection status |
-| DELETE | \`/recordings/:id\` | Delete a recording |
+| POST | `/report-anomaly` | Receive detection report from Python AI |
+| POST | `/upload-video` | Receive video file upload from Python AI |
+| POST | `/notify-clip` | Receive clip-ready notification from Python AI |
+| GET | `/proxy-clip?url=` | Proxy video stream from Python server |
+| GET | `/dashboard` | Main dashboard page |
+| GET | `/api/health` | Server health check |
+| PATCH | `/detections/:id/status` | Update detection status |
+| DELETE | `/recordings/:id` | Delete a recording |
 
 ---
 
@@ -226,7 +215,7 @@ This project works together with the **Python AI Edge Device** (separate reposit
 
 ## 👩‍💻 Author
 
-**Sayyida** — Node.js Backend & Dashboard
+**Sayyida** — Node.js Backend & Dashboard  
 Internship at ISR Lab, PT. Telkom Indonesia — 2026
 
 ---
@@ -236,6 +225,6 @@ Internship at ISR Lab, PT. Telkom Indonesia — 2026
 - [Socket.io Documentation](https://socket.io/docs)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs)
 - [FFmpeg Documentation](https://ffmpeg.org/documentation.html)
-EOF
+ENDOFFILE
 
 
