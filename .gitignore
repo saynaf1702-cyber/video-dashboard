@@ -1,0 +1,15 @@
+# Environment & secrets
+.env
+*.env
+
+# Dependencies
+node_modules/
+
+# Video & storage files
+recordings/
+storage/
+clips/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — ISR Lab CCTV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@700;800&family=Barlow:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:      #ffffff;
+      --card:    #b9bbbe;
+      --border:  #6b6b6b;
+      --accent:  #00d4ff;
+      --danger:  #ff3b3b;
+      --text:    #d0e8f5;
+      --muted:   #4a7090;
+      --mono:    'Share Tech Mono', monospace;
+      --display: 'Barlow Condensed', sans-serif;
+      --sans:    'Barlow', sans-serif;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-wrap {
+      width: 100%;
+      max-width: 400px;
+      padding: 0 20px;
+    }
+    .logo {
+      font-family: var(--display);
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-family: var(--mono);
+      font-size: .65rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 2px;
+      margin-bottom: 36px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px;
+    }
+    .card-title {
+      font-family: var(--display);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: .62rem;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    input {
+      width: 100%;
+      background: #0a1520;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: .85rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    input:focus { border-color: var(--accent); }
+    .error {
+      background: rgba(255,59,59,.08);
+      border: 1px solid rgba(255,59,59,.3);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: .72rem;
+      color: #ff8080;
+      margin-bottom: 18px;
+    }
+    .btn-login {
+      width: 100%;
+      background: rgba(0,212,255,.1);
+      border: 1px solid rgba(0,212,255,.3);
+      border-radius: 4px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      letter-spacing: 2px;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all .2s;
+      margin-top: 6px;
+    }
+    .btn-login:hover { background: rgba(0,212,255,.2); }
+    .pulse {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #00e676;
+      box-shadow: 0 0 8px #00e676;
+      display: inline-block;
+      margin-right: 6px;
+      animation: blink 1.4s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .footer {
+      font-family: var(--mono);
+      font-size: .6rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 24px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="logo">ISR Lab</div>
+    <div class="subtitle">CCTV MINIMARKET AI — ACCESS CONTROL</div>
+
+    <div class="card">
+      <div class="card-title">🔐 Login</div>
+
+      <% if (error) { %>
+        <div class="error">⚠ <%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/login">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="Masukkan username" autocomplete="off" required/>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Masukkan password" required/>
+        </div>
+        <button type="submit" class="btn-login">▶ MASUK</button>
+      </form>
+    </div>
+
+    <div class="footer">
+      <span class="pulse"></span>SYSTEM ONLINE — ISR LAB 2026
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CCTV Minimarket AI — Dashboard</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:      #ffffff;
+      --surface: #ffffff;
+      --card:    #241a5b;
+      --border:  #007bff;
+      --accent:  #00d4ff;
+      --danger:  #ff3b3b;
+      --warn:    #ffaa00;
+      --safe:    #00e676;
+      --text:    #d0e8f5;
+      --muted:   #4a7090;
+      --mono:    'Share Tech Mono', monospace;
+      --display: 'Barlow Condensed', sans-serif;
+      --sans:    'Barlow', sans-serif;
+      --sidebar-w: 220px;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      flex-shrink: 0;
+    }
+    .logo { font-family:var(--display); font-size:1.4rem; font-weight:800; letter-spacing:4px; color:var(--accent); }
+    .header-sep { width:1px; height:22px; background:var(--border); }
+    .header-label { font-family:var(--mono); font-size:.62rem; color:var(--muted); letter-spacing:1px; }
+    .live-dot { display:flex; align-items:center; gap:8px; margin-left:16px; }
+    .pulse { width:8px; height:8px; border-radius:50%; background:var(--safe); box-shadow:0 0 8px var(--safe); animation:blink 1.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    #clock { font-family:var(--mono); font-size:.75rem; color:var(--accent); margin-left:auto; letter-spacing:1px; }
+
+    /* BODY LAYOUT */
+    .body-wrap { display:flex; flex:1; height: calc(100vh - 52px); overflow:hidden; }
+
+    /* SIDEBAR */
+    aside {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .sidebar-section { padding: 18px 12px 8px; }
+    .sidebar-section-label { font-family:var(--mono); font-size:.58rem; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; padding-left:4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 5px; cursor: pointer;
+      font-family: var(--mono); font-size: .72rem;
+      color: var(--muted); letter-spacing: 1px;
+      transition: all .18s; user-select: none;
+      margin-bottom: 2px; border-left: 2px solid transparent;
+    }
+    .nav-item:hover { background:rgba(0,212,255,.06); color:var(--text); }
+    .nav-item.active { background:rgba(0,212,255,.1); color:var(--accent); border-left-color:var(--accent); }
+    .nav-icon { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
+
+    /* NOTIFIKASI SIDEBAR */
+    .notif-list { padding:0 10px 16px; display:flex; flex-direction:column; gap:6px; }
+    .notif-item {
+      border-radius: 5px; padding: 8px 12px;
+      font-family: var(--mono); font-size: .65rem; border: 1px solid;
+      cursor: pointer; animation: notifSlide .3s ease-out;
+    }
+    @keyframes notifSlide { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+    .notif-item.danger { background:rgba(255,59,59,.08); border-color:rgba(255,59,59,.25); color:#ff8080; }
+    .notif-item.safe   { background:rgba(0,230,118,.07); border-color:rgba(0,230,118,.2);  color:#00e676; }
+    .notif-name { font-weight:600; display:flex; align-items:center; gap:5px; margin-bottom:2px; }
+    .notif-time { color:var(--muted); font-size:.6rem; }
+
+    /* MAIN */
+    main { flex:1; overflow-y:auto; padding:22px 24px; }
+
+    /* PAGES */
+    .page { display:none; }
+    .page.active { display:block; }
+
+    /* STAT CARDS */
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+    .stat { background:var(--card); border:1px solid var(--border); border-radius:6px; padding:18px 20px; position:relative; overflow:hidden; }
+    .stat::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; }
+    .stat.a::before{background:var(--accent)} .stat.d::before{background:var(--danger)}
+    .stat.s::before{background:var(--safe)}   .stat.w::before{background:var(--warn)}
+    .stat-label { font-family:var(--mono); font-size:.6rem; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+    .stat-val { font-family:var(--display); font-size:2.4rem; font-weight:800; line-height:1; }
+    .stat.a .stat-val{color:var(--accent)} .stat.d .stat-val{color:var(--danger)}
+    .stat.s .stat-val{color:var(--safe)}   .stat.w .stat-val{color:var(--warn)}
+
+    /* ALERT BANNER */
+    #alertBanner {
+      display:none; margin-bottom:20px; background:#1a0808;
+      border:1px solid var(--danger); border-radius:6px; padding:16px 20px;
+      animation:flashBorder 1s ease-in-out 3;
+    }
+    @keyframes flashBorder{0%,100%{border-color:var(--danger)}50%{border-color:#ff000088}}
+    .banner-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .banner-title { font-family:var(--display); font-size:1.1rem; font-weight:800; color:var(--danger); letter-spacing:2px; }
+    .banner-detail { font-family:var(--mono); font-size:.8rem; color:var(--text); }
+    #alertVideo { width:100%; max-width:480px; border-radius:4px; margin-top:10px; background:#000; }
+
+    /* PANEL */
+    .panel { background:var(--card); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-bottom:20px; }
+    .panel-head { display:flex; align-items:center; justify-content:space-between; padding:11px 18px; background:var(--surface); border-bottom:1px solid var(--border); }
+    .panel-title { font-family:var(--display); font-size:.78rem; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--muted); }
+    .panel-badge { font-family:var(--mono); font-size:.63rem; padding:3px 8px; border-radius:2px; background:rgba(0,212,255,.1); color:var(--accent); border:1px solid rgba(0,212,255,.2); }
+
+    /* TABLE */
+    .tbl { width:100%; border-collapse:collapse; }
+    .tbl th { padding:9px 16px; font-family:var(--mono); font-size:.62rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); background:var(--surface); border-bottom:1px solid var(--border); text-align:left; }
+    .tbl td { padding:9px 16px; font-size:.82rem; border-bottom:1px solid rgba(28,42,56,.7); }
+    .tbl tr:hover td { background:rgba(0,212,255,.02); }
+    .flash-row { animation:rowFlash 1.5s ease-out; }
+    @keyframes rowFlash{from{background:rgba(0,212,255,.15)}to{background:transparent}}
+
+    /* TAGS  */
+    .tag { display:inline-block; padding:2px 10px; border-radius:2px; font-family:var(--mono); font-size:.68rem; letter-spacing:1px; font-weight:600; }
+    .tag-red    { background:rgba(255,59,59,.15);  color:#ff8080; border:1px solid rgba(255,59,59,.3);  }
+    .tag-green  { background:rgba(0,230,118,.12);  color:#00e676; border:1px solid rgba(0,230,118,.25); }
+    .tag-yellow { background:rgba(255,170,0,.12);  color:#ffaa00; border:1px solid rgba(255,170,0,.25); }
+
+    /* BUTTONS */
+    .btn-play { background:rgba(0,212,255,.1); color:var(--accent); border:1px solid rgba(0,212,255,.3); font-family:var(--mono); font-size:.65rem; padding:4px 12px; border-radius:3px; cursor:pointer; transition:all .2s; }
+    .btn-play:hover { background:rgba(0,212,255,.2); }
+    .btn-play:disabled { opacity:.45; cursor:not-allowed; background:rgba(255,170,0,.08); color:var(--warn); border-color:rgba(255,170,0,.25); }
+    .btn-play.clip-ready { background:rgba(0,230,118,.12); color:var(--safe); border-color:rgba(0,230,118,.3); animation:clipReadyFlash .8s ease-out; }
+    @keyframes clipReadyFlash{0%{background:rgba(0,230,118,.4);box-shadow:0 0 12px rgba(0,230,118,.5);}100%{background:rgba(0,230,118,.12);box-shadow:none;}}
+    .btn-del { background:none; color:var(--danger); border:1px solid rgba(255,59,59,.3); font-family:var(--mono); font-size:.65rem; padding:4px 12px; border-radius:3px; cursor:pointer; transition:all .2s; }
+    .btn-del:hover { background:rgba(255,59,59,.15); }
+
+    /* LIVE MINI STATS */
+    .live-stats { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--border); }
+    .live-stat { padding:14px 20px; }
+    .live-stat:not(:last-child) { border-right:1px solid var(--border); }
+
+    /* VOD GRID */
+    .vod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; padding:20px; }
+    .vod-card { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; transition:border-color .2s,transform .2s; }
+    .vod-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+    .vod-card video { width:100%; height:160px; object-fit:cover; background:#000; display:block; }
+    .vod-meta { padding:12px 14px; }
+    .vod-title { font-family:var(--display); font-size:.95rem; font-weight:700; letter-spacing:1px; margin-bottom:4px; }
+    .vod-detail { font-family:var(--mono); font-size:.65rem; color:var(--muted); display:flex; gap:10px; margin-bottom:8px; }
+    .vod-footer { display:flex; align-items:center; justify-content:space-between; }
+
+    /* EMPTY */
+    .empty { padding:36px; text-align:center; font-family:var(--mono); font-size:.72rem; color:var(--muted); letter-spacing:1px; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:var(--surface)}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">ISR Lab</div>
+  <div class="header-sep"></div>
+  <span class="header-label">CCTV MINIMARKET AI</span>
+  <div class="live-dot">
+    <div class="pulse"></div>
+    <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">LIVE</span>
+  </div>
+  <span id="clock"></span>
+  <form method="POST" action="/logout" style="margin-left:16px;">
+    <button type="submit" style="background:none;border:1px solid rgba(255,59,59,.3);color:#ff8080;font-family:var(--mono);font-size:.62rem;padding:4px 12px;border-radius:3px;cursor:pointer;letter-spacing:1px;">
+      LOGOUT
+    </button>
+  </form>
+</header>
+
+<!-- BODY -->
+<div class="body-wrap">
+
+  <!-- SIDEBAR  -->
+  <aside>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Menu</div>
+      <div class="nav-item active" onclick="switchPage(this,'pg-live')">
+        <span class="nav-icon">▶</span> Live Stream
+      </div>
+      <div class="nav-item" onclick="switchPage(this,'pg-overview')">
+        <span class="nav-icon">◈</span> Overview
+      </div>
+      <div class="nav-item" onclick="switchPage(this,'pg-detections')">
+        <span class="nav-icon">⚠</span> Deteksi
+      </div>
+      <div class="nav-item" onclick="switchPage(this,'pg-vod')">
+        <span class="nav-icon">◉</span> Rekaman VOD
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="padding-bottom:4px;">
+      <div class="sidebar-section-label">Notifikasi</div>
+    </div>
+    <div class="notif-list" id="notifList">
+      <%
+        const notifData = data.slice(0, 10);
+      %>
+      <% if(notifData.length === 0) { %>
+        <div style="font-family:var(--mono);font-size:.6rem;color:var(--muted);padding:4px;">Belum ada notifikasi</div>
+      <% } else { %>
+        <% notifData.forEach(row => { %>
+          <div class="notif-item <%= row.event_type === 'Anomali' ? 'danger' : 'safe' %>">
+            <div class="notif-name">
+              <span><%= row.event_type === 'Anomali' ? '⚠' : '✔' %></span>
+              <%= row.nama || (row.event_type === 'Anomali' ? 'Unknown' : row.event_type) %>
+            </div>
+            <div class="notif-time"><%= new Date(row.created_at).toLocaleTimeString('id-ID', {hour12:false}) %></div>
+          </div>
+        <% }); %>
+      <% } %>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main>
+
+    <!-- ══ PAGE: LIVE STREAM ══ -->
+    <div class="page active" id="pg-live">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Live Stream</span>
+          <span class="panel-badge">
+            <span style="color:var(--danger);animation:blink 1s infinite;">●</span>
+            TC70-LabISR
+          </span>
+        </div>
+        <div style="background:#000; position:relative; line-height:0; width:100%;">
+          <iframe
+            src="<%= pythonUrl %>/video_feed"
+            id="liveStream"
+            style="width:100%; height:100%; aspect-ratio:16/9; border:none; display:block;"
+          ></iframe>
+          <div style="position:absolute;top:10px;left:10px;background:rgba(8,12,16,.85);border:1px solid var(--danger);border-radius:3px;padding:4px 10px;display:flex;align-items:center;gap:6px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--danger);box-shadow:0 0 6px var(--danger);animation:blink 1s infinite;"></div>
+            <span style="font-family:var(--mono);font-size:.65rem;color:var(--danger);letter-spacing:2px;">REC</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: OVERVIEW ══ -->
+    <div class="page" id="pg-overview">
+      <div class="stats" style="grid-template-columns:repeat(4,1fr);">
+              <div class="stat a">
+                <div class="stat-label">Total Deteksi</div>
+                <div class="stat-val" id="ov-total"><%= stats.total %></div>
+              </div>
+              <div class="stat d">
+                <div class="stat-label">Hari Ini</div>
+                <div class="stat-val" id="s-today"><%= stats.today %></div>
+              </div>
+              <div class="stat d">
+                <div class="stat-label">Unknown</div>
+                <div class="stat-val" id="ov-unknown"><%= stats.unknown || 0 %></div>
+              </div>
+              <div class="stat w">
+                <div class="stat-label">Line Crossing</div>
+                <div class="stat-val" id="ov-crossing"><%= stats.crossing || 0 %></div>
+                <div style="display:flex;gap:16px;margin-top:4px;">
+                  <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">
+                    Masuk: <span style="color:var(--safe);" id="ov-masuk"><%= stats.crossing_masuk || 0 %></span>
+                  </span>
+                  <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">
+                    Keluar: <span style="color:var(--danger);" id="ov-keluar"><%= stats.crossing_keluar || 0 %></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Deteksi Terbaru</span>
+          <span class="panel-badge" id="recent-count"><%= data.length %> records</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>WAKTU</th>
+                <th>NAMA</th>
+                <th>EVENT</th>
+              </tr>
+            </thead>
+            <tbody id="recentBody">
+              <% if(data.length === 0) { %>
+                <tr><td colspan="3" class="empty">BELUM ADA DATA</td></tr>
+              <% } else { %>
+                <% data.slice(0,10).forEach(row => { %>
+                  <tr id="row-<%= row.id %>">
+                    <td style="font-family:var(--mono);font-size:.72rem;"><%= new Date(row.created_at).toLocaleString('id-ID') %></td>
+                    <td style="font-family:var(--mono);"><%= row.nama || '—' %></td>
+                    <td>
+                      <% if(row.event_type === 'Anomali') { %>
+                        <span class="tag tag-red">⚠ ANOMALI</span>
+                      <% } else { %>
+                        <span class="tag tag-green">✔ TERDETEKSI</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: DETEKSI ══ -->
+    <div class="page" id="pg-detections">
+      <div id="alertBanner">
+        <div class="banner-top">
+          <span style="font-size:1.4rem;">⚠️</span>
+          <span class="banner-title">ANOMALI TERDETEKSI!</span>
+          <span class="panel-badge" id="bannerBadge">—</span>
+        </div>
+        <div class="banner-detail" id="bannerDetail">—</div>
+        <video id="alertVideo" controls autoplay style="display:none;"></video>
+        <div id="bannerWaiting" style="font-family:var(--mono);font-size:.72rem;color:var(--warn);margin-top:10px;display:none;">
+          ⏳ Menunggu clip diproses...
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Data Anomali Terdeteksi</span>
+          <span class="panel-badge" id="det-count"><%= data.filter(r => r.event_type === 'Anomali').length %> total</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>#ID</th>
+                <th>WAKTU</th>
+                <th>TIPE KEJADIAN</th>
+                <th>AKSI</th>
+              </tr>
+            </thead>
+            <tbody id="detBody">
+              <% const anomaliData = data.filter(r => r.event_type === 'Anomali'); %>
+              <% if(anomaliData.length === 0) { %>
+                <tr><td colspan="4" class="empty">BELUM ADA ANOMALI</td></tr>
+              <% } else { %>
+                <% anomaliData.forEach(row => { %>
+                  <tr id="det-<%= row.id %>">
+                    <td style="font-family:var(--mono);color:var(--muted);">#<%= row.id %></td>
+                    <td style="font-family:var(--mono);font-size:.72rem;"><%= new Date(row.created_at).toLocaleString('id-ID') %></td>
+                    <td><span class="tag tag-red">⚠ ANOMALI</span></td>
+                    <td>
+                      <% if(row.image_path && row.image_path !== '') { %>
+                        <button class="btn-play clip-ready" onclick="playVideo('<%= row.image_path %>')">▶ Lihat Clip</button>
+                      <% } else { %>
+                        <button class="btn-play" id="btn-<%= row.id %>" disabled>⏳ Diproses...</button>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: VOD ══ -->
+    <div class="page" id="pg-vod">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Video on Demand — Rekaman</span>
+          <span class="panel-badge"><%= recordings.length %> video</span>
+        </div>
+        <% if(recordings.length === 0) { %>
+          <div class="empty">BELUM ADA REKAMAN</div>
+        <% } else { %>
+          <div class="vod-grid" id="vodGrid">
+            <% recordings.forEach(rec => { %>
+              <div class="vod-card" id="vod-<%= rec.id %>">
+                <video controls preload="metadata">
+                  <source src="<%= rec.file_path %>" type="video/mp4"/>
+                </video>
+                <div class="vod-meta">
+                  <div class="vod-title"><%= rec.file_name.replace('.mp4','') %></div>
+                  <div class="vod-detail">
+                    <span>⏱ <%= rec.duration_sec || 300 %>s</span>
+                    <span>💾 <%= rec.file_size_kb || 0 %> KB</span>
+                  </div>
+                  <div class="vod-detail"><%= new Date(rec.created_at).toLocaleString('id-ID') %></div>
+                  <div class="vod-footer">
+                    <span class="tag <%= rec.synced ? 'tag-green' : 'tag-yellow' %>">
+                      <%= rec.synced ? '☁ SYNCED' : '⏳ PENDING' %>
+                    </span>
+                    <button class="btn-del" data-id="<%= rec.id %>" onclick="deleteRecording(this.dataset.id)">HAPUS</button>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const socket = io();
+
+  // ── Clock
+  setInterval(() => {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleString('id-ID', { hour12: false });
+  }, 1000);
+
+  // ── Navigasi sidebar
+  function switchPage(el, pageId) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(pageId).classList.add('active');
+  }
+
+  // ── Tambah notif ke sidebar
+  function addNotif(name, eventType, timeStr) {
+    const list = document.getElementById('notifList');
+    const placeholder = list.querySelector('div:not(.notif-item)');
+    if (placeholder) placeholder.remove();
+
+    const item = document.createElement('div');
+    const isDanger = eventType === 'Anomali';
+    item.className = 'notif-item ' + (isDanger ? 'danger' : 'safe');
+    item.innerHTML = `
+      <div class="notif-name">
+        <span>${isDanger ? '⚠' : '✔'}</span>
+        ${name || (isDanger ? 'Unknown' : eventType)}
+      </div>
+      <div class="notif-time">${timeStr}</div>
+    `;
+    list.insertBefore(item, list.firstChild);
+
+    // Maks 8 notif
+    const all = list.querySelectorAll('.notif-item');
+    if (all.length > 10) all[all.length - 1].remove();
+  }
+
+  // ── Play video di alert banner
+  function playVideo(src) {
+    if (!src || src === '') return;
+    const detNav = document.querySelectorAll('.nav-item')[2];
+    switchPage(detNav, 'pg-detections');
+
+    const banner  = document.getElementById('alertBanner');
+    const video   = document.getElementById('alertVideo');
+    const waiting = document.getElementById('bannerWaiting');
+    banner.style.display  = 'block';
+    video.style.display   = 'block';
+    waiting.style.display = 'none';
+    video.src = src;
+    video.play();
+    banner.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // ── Hapus rekaman
+  async function deleteRecording(id) {
+    if (!confirm('Hapus rekaman ini?')) return;
+    await fetch(`/recordings/${id}`, { method: 'DELETE' });
+    document.getElementById('vod-' + id)?.remove();
+    ['s-rec', 'ls-rec'].forEach(elId => {
+      const el = document.getElementById(elId);
+      if (el) el.textContent = Math.max(0, parseInt(el.textContent) - 1);
+    });
+  }
+
+  // ── Socket: event baru dari Python
+  socket.on('new-anomaly', (data) => {
+    const isAnomali = data.event_type === 'Anomali';
+    const timeStr   = new Date().toLocaleTimeString('id-ID', { hour12: false });
+    const fullTime  = new Date().toLocaleString('id-ID');
+
+    // 1. Notif sidebar
+    addNotif(data.nama, data.event_type, timeStr);
+
+    // 2. Tabel Overview
+    const tbody = document.getElementById('recentBody');
+    if (tbody) {
+      if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+      const row = document.createElement('tr');
+      row.id = 'row-' + data.id;
+      row.className = 'flash-row';
+      row.innerHTML = `
+        <td style="font-family:var(--mono);font-size:.72rem;">${fullTime}</td>
+        <td style="font-family:var(--mono);">${data.nama || '—'}</td>
+        <td>${isAnomali
+          ? '<span class="tag tag-red">⚠ ANOMALI</span>'
+          : '<span class="tag tag-green">✔ TERDETEKSI</span>'}
+        </td>
+      `;
+      tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    // 3. Counter total
+    ['ls-total', 'ov-total'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = parseInt(el.textContent || 0) + 1;
+        });
+        // Update counter Unknown / Line Crossing di Overview
+        if (data.event_type === 'Line Crossing') {
+          const lc = document.getElementById('ov-crossing');
+          if (lc) lc.textContent = parseInt(lc.textContent || 0) + 1;
+        } else if (!data.nama || data.nama === 'Unknown') {
+          const el = document.getElementById('ov-unknown');
+          if (el) el.textContent = parseInt(el.textContent || 0) + 1;
+        }
+
+    if (isAnomali) {
+      // 4. Alert banner
+      const banner  = document.getElementById('alertBanner');
+      const video   = document.getElementById('alertVideo');
+      const waiting = document.getElementById('bannerWaiting');
+      banner.style.display  = 'block';
+      video.style.display   = 'none';
+      waiting.style.display = 'block';
+      document.getElementById('bannerBadge').textContent  = data.nama || 'Unknown';
+      document.getElementById('bannerDetail').textContent = `⚠ ANOMALI TERDETEKSI | ${fullTime}`;
+      setTimeout(() => { banner.style.display = 'none'; }, 15000);
+
+      // 5. Baris tabel Deteksi
+      const detBody = document.getElementById('detBody');
+      if (detBody) {
+        if (detBody.querySelector('td[colspan]')) detBody.innerHTML = '';
+        const detRow = document.createElement('tr');
+        detRow.id = 'det-' + data.id;
+        detRow.className = 'flash-row';
+        const hasClip = data.image_path && data.image_path !== '';
+        detRow.innerHTML = `
+          <td style="font-family:var(--mono);color:var(--muted);">#${data.id}</td>
+          <td style="font-family:var(--mono);font-size:.72rem;">${fullTime}</td>
+          <td><span class="tag tag-red">⚠ ANOMALI</span></td>
+          <td>${hasClip
+            ? `<button class="btn-play clip-ready" onclick="playVideo('${data.image_path}')">▶ Lihat Clip</button>`
+            : `<button class="btn-play" id="btn-${data.id}" disabled>⏳ Diproses...</button>`}
+          </td>
+        `;
+        detBody.insertBefore(detRow, detBody.firstChild);
+        const dc = document.getElementById('det-count');
+        if (dc) dc.textContent = (parseInt(dc.textContent) + 1) + ' total';
+      }
+
+      // Update counter Unknown / Line Crossing
+      if (data.event_type === 'Line Crossing') {
+        const lc = document.getElementById('ls-crossing');
+        if (lc) lc.textContent = parseInt(lc.textContent || 0) + 1;
+
+        // Cek arah: data.direction harus dikirim dari Python ('masuk' atau 'keluar')
+        if (data.direction === 'masuk') {
+          const el = document.getElementById('ls-masuk');
+          if (el) el.textContent = parseInt(el.textContent || 0) + 1;
+        } else if (data.direction === 'keluar') {
+          const el = document.getElementById('ls-keluar');
+          if (el) el.textContent = parseInt(el.textContent || 0) + 1;
+        }
+      } else if (data.nama && data.nama !== 'Unknown') {
+        const el = document.getElementById('ls-known');
+        if (el) el.textContent = parseInt(el.textContent || 0) + 1;
+      } else {
+        const el = document.getElementById('ls-unknown');
+        if (el) el.textContent = parseInt(el.textContent || 0) + 1;
+      }
+    }
+  });
+
+  // ── Socket: clip video siap
+  socket.on('anomaly-clip-ready', (data) => {
+    const btn = document.getElementById('btn-' + data.id);
+    if (btn) {
+      btn.disabled    = false;
+      btn.className   = 'btn-play clip-ready';
+      btn.textContent = '▶ Lihat Clip';
+      btn.setAttribute('onclick', `playVideo('${data.clip_url}')`);
+    }
+    const banner  = document.getElementById('alertBanner');
+    const video   = document.getElementById('alertVideo');
+    const waiting = document.getElementById('bannerWaiting');
+    if (banner.style.display !== 'none') {
+      waiting.style.display = 'none';
+      video.style.display   = 'block';
+      video.src = data.clip_url;
+      video.play();
+    }
+  });
+
+  // ── Socket: rekaman baru masuk VOD
+  socket.on('new-recording', (data) => {
+    ['s-rec', 'ls-rec'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = parseInt(el.textContent || 0) + 1;
+    });
+    const grid = document.getElementById('vodGrid');
+    if (grid) {
+      const empty = grid.querySelector('.empty');
+      if (empty) empty.remove();
+      const card = document.createElement('div');
+      card.className = 'vod-card';
+      card.id = 'vod-' + data.id;
+      card.innerHTML = `
+        <video controls preload="metadata">
+          <source src="${data.file_path}" type="video/mp4"/>
+        </video>
+        <div class="vod-meta">
+          <div class="vod-title">${data.file_name ? data.file_name.replace('.mp4','') : data.event_type}</div>
+          <div class="vod-detail">
+            <span>⏱ ${data.duration_sec || 6}s</span>
+            <span>💾 ${data.file_size_kb || 0} KB</span>
+          </div>
+          <div class="vod-detail">${new Date().toLocaleString('id-ID')}</div>
+          <div class="vod-footer">
+            <span class="tag tag-yellow">⏳ PENDING</span>
+            <button class="btn-del" onclick="deleteRecording(${data.id})">HAPUS</button>
+          </div>
+        </div>
+      `;
+      grid.insertBefore(card, grid.firstChild);
+    }
+  });
+
+  // ── Socket: rekaman dihapus
+  socket.on('recording-deleted', (data) => {
+    document.getElementById('vod-' + data.id)?.remove();
+  });
+</script>
+</body>
+</html>
