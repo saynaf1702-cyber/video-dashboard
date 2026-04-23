@@ -49,7 +49,6 @@ This system can be applied to various environments that require CCTV-based AI su
 - **Socket.io** — Real-time WebSocket communication to dashboard
 - **EJS** — Server-side template engine for dashboard UI
 - **Multer** — Handles video file uploads from Python AI
-- **FFmpeg** — Cuts video clips around anomaly timestamps
 - **bcrypt** — Secure password hashing
 - **Docker** — Containerization for deployment
 
