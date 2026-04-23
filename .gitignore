@@ -13,3 +13,6 @@ clips/
 # OS
 .DS_Store
 Thumbs.db
+
+# Docker - database volume
+pgdata/
