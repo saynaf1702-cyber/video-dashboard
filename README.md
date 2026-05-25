@@ -114,6 +114,7 @@ recordings
 
 ## 📁 Project Structure
 
+```
 video-dashboard/
 ├── dashboard/
 │   ├── login.png          # Dashboard screenshot
@@ -133,8 +134,7 @@ video-dashboard/
 ├── package.json           # Project dependencies
 ├── .env.example           # Environment variable template
 └── .gitignore             # Files ignored by Git
-
----
+```
 
 ## ⚙️ Installation
 
