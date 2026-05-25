@@ -13,3 +13,11 @@ clips/
 # OS
 .DS_Store
 Thumbs.db
+
+# Docker - database volume
+pgdata/
+
+# Utility scripts with hardcoded credentials
+add-user.js
+resetpw.js
+hash-password.js

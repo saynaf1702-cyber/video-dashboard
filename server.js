@@ -5,10 +5,8 @@ const { Server } = require('socket.io'); // Library untuk komunikasi real-time (
 const multer = require('multer'); // Middleware khusus untuk menangani upload file (Video/Foto).
 const path = require('path'); 
 const fs = require('fs'); //mengelola file folder
-const cors = require('cors');
-const ffmpeg = require('fluent-ffmpeg'); 
-const http_module = require('http'); // sama ga kaya yg diatas
-const https_module = require('https');
+const cors = require('cors'); 
+const https = require('https');
 require('dotenv').config(); //untuk membaca dari file .env
 const session      = require('express-session');
 const bcrypt       = require('bcrypt');
@@ -105,7 +103,6 @@ const upload = multer({ storage, limits: { fileSize: 200 * 1024 * 1024 } }); //2
 // POST /Menerima Laporan Deteksi dari Python AI
 app.post('/report-anomaly', async (req, res) => {
   const { nama, confidence, image_path, direction, event_type: rawType } = req.body;
-  // Tentukan event_type
   const event_type = rawType || ((!nama || nama === 'Unknown') ? 'Anomali' : 'Terdeteksi');
 
   try {
@@ -127,84 +124,35 @@ app.post('/report-anomaly', async (req, res) => {
   }
 });
 
-// ─── POST /report-anomaly (dari Python AI) ────────────────────────────────────
-app.post('/api/anomaly-clip', async (req, res) => {
-  const { source_file, event_timestamp, nama, confidence } = req.body;
-
-  const inputPath = path.join(recordingsDir, source_file || ''); 
-  const clipName = `CLIP_${Date.now()}.mp4`;
-  const clipPath = path.join(recordingsDir, clipName);
-  const event_type = (!nama || nama === 'Unknown') ? 'Anomali' : 'Terdeteksi';
-
-  let detection_id = null;
-  try {
-    const reportResult = await pool.query(
-      `INSERT INTO reports (event_type, nama, confidence, image_path)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [event_type, nama || 'Unknown', confidence, '']
-    );
-    detection_id = reportResult.rows[0].id;
-    io.emit('new-anomaly', reportResult.rows[0]);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-
-  if (!source_file || !fs.existsSync(inputPath)) {
-    return res.status(200).json({ message: 'Report saved, source file missing', detection_id });
-  }
-
-  const startSec = Math.max(0, event_timestamp - 3);
-  ffmpeg(inputPath)
-    .setStartTime(startSec)
-    .setDuration(10)
-    .output(clipPath)
-    .on('end', async () => {
-      console.log(`✂️ Clip created: ${clipName}`);
-      try {
-        const fileSizeKb = Math.round(fs.statSync(clipPath).size / 1024);
-        const recResult = await pool.query(
-          `INSERT INTO recordings
-            (detection_id, event_type, file_name, file_path, duration_sec, file_size_kb, is_clip)
-          VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING *`
-          [detection_id, event_type, clipName,
-           `/recordings/${clipName}`, 10, fileSizeKb]
-        );
-        io.emit('new-recording', recResult.rows[0]);
-        console.log(`🎬 Clip saved & emitted: ${clipName}`);
-        res.status(201).json(recResult.rows[0]);
-      } catch (err) {
-        console.error('❌ Clip DB save error:', err.message);
-        res.status(500).json({ error: err.message });
-      }
-    })
-    .on('error', (err) => {
-      console.error(`❌ FFmpeg error: ${err.message}`);
-      res.status(500).json({ error: err.message });
-    })
-    .run();
-});
-
 // GET / Jembatan Video antara Python dan Dashboard (proxy video dari Python server) 
 app.get('/proxy-clip', (req, res) => {
   const targetUrl = req.query.url;
-
-  if (!targetUrl) 
+  if (!targetUrl)
     return res.status(400).send('Missing url param');
-
   if (!targetUrl.startsWith(process.env.PYTHON_SERVER_URL))
     return res.status(403).send('Forbidden');
 
-  const lib = targetUrl.startsWith('https') ? https_module : http;
+  const lib = targetUrl.startsWith('https') ? https : http;
+  const options = { headers: {} };
+  if (req.headers.range) {
+    options.headers['Range'] = req.headers.range;
+  }
 
-  lib.get(targetUrl, (proxyRes) => {
+  lib.get(targetUrl, options, (proxyRes) => {
+
     res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'video/mp4');
     res.setHeader('Accept-Ranges', 'bytes');
     if (proxyRes.headers['content-length'])
       res.setHeader('Content-Length', proxyRes.headers['content-length']);
-
+    if (proxyRes.headers['content-range'])
+      res.setHeader('Content-Range', proxyRes.headers['content-range']);
     res.statusCode = proxyRes.statusCode;
     proxyRes.pipe(res);
-  }).on('error', () => res.status(502).send('Bad Gateway'));
+    
+  }).on('error', (err) => {
+    console.error('Proxy error:', err.message);
+    res.status(502).send('Bad Gateway');
+  });
 });
 
 // POST / Menerima Upload File Video dari Python (dari Python, kirim file .mp4) 
@@ -238,41 +186,38 @@ app.post('/upload-video', upload.single('video'), async (req, res) => {
 //POST / Menerima Notifikasi Clip Selesai dari Python
 app.post('/notify-clip', async (req, res) => {
   const { filename, trigger, clip_url, duration_sec, detection_id } = req.body;
+  if (!detection_id) {
+    console.warn('⚠️ notify-clip: detection_id kosong, clip diabaikan');
+    return res.status(400).json({ error: 'detection_id required' });
+  }
 
-  const event_type = trigger === 'UNKNOWN' ? 'Anomali' : 'Crossing';
-  const proxyUrl   = `http://${process.env.SERVER_IP}:${process.env.PORT}/proxy-clip?url=${encodeURIComponent(clip_url)}`;
+  const event_type = 'Anomali';
+  const proxyUrl = `http://${process.env.SERVER_IP}:${process.env.PORT}/proxy-clip?url=${encodeURIComponent(clip_url)}`;
 
   try {
-    let report_id = detection_id;
+    await pool.query(
+      `UPDATE reports SET image_path = $1 WHERE id = $2`,
+      [proxyUrl, detection_id]
+    );
 
-    if (!report_id) {
-      const { rows } = await pool.query(
-        `INSERT INTO reports (event_type, nama, confidence, image_path)
-         VALUES ($1, $2, 1.0, $3) RETURNING *`,
-        [event_type, trigger, proxyUrl]
-      );
-      report_id = rows[0].id;
-      io.emit('new-anomaly', rows[0]);
-    } else {
-      await pool.query(
-        `UPDATE reports SET image_path = $1 WHERE id = $2`,
-        [proxyUrl, report_id]
-      );
-      io.emit('anomaly-clip-ready', { id: report_id, clip_url: proxyUrl });
-    }
+    io.emit('anomaly-clip-ready', { 
+      id: detection_id, 
+      clip_url: proxyUrl 
+    });
 
     const { rows } = await pool.query(
       `INSERT INTO recordings
         (detection_id, event_type, file_name, file_path, duration_sec, file_size_kb, is_clip)
-      VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING *`
-      [report_id, event_type, filename, proxyUrl, duration_sec || 10]
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING *`,
+      [detection_id, event_type, filename, proxyUrl, duration_sec || 10, 0]
     );
 
-    io.emit('new-recording', rows[0]);
+    io.emit('new-clip', rows[0]);
     console.log(`🎬 CLIP DITERIMA: ${filename} → ${proxyUrl}`);
     res.status(201).json(rows[0]);
 
   } catch (err) {
+    console.error('❌ notify-clip error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -319,7 +264,7 @@ app.get('/dashboard', requireLogin, async (req, res) => {
   try {
     const [reports, recordings, stats] = await Promise.all([
       pool.query('SELECT * FROM reports ORDER BY created_at DESC LIMIT 100'),
-      pool.query(`
+            pool.query(`
         SELECT * FROM recordings 
         WHERE is_clip = FALSE
         AND created_at >= NOW() - INTERVAL '3 days'
@@ -333,9 +278,9 @@ app.get('/dashboard', requireLogin, async (req, res) => {
           (SELECT COUNT(*) FROM recordings WHERE synced = false)                               AS unsynced,
           (SELECT COUNT(*) FROM reports WHERE event_type = 'Terdeteksi')                       AS known,
           (SELECT COUNT(*) FROM reports WHERE event_type = 'Anomali')                          AS unknown,
-          (SELECT COUNT(*) FROM reports WHERE event_type = 'Line Crossing')                    AS crossing,
-          (SELECT COUNT(*) FROM reports WHERE event_type = 'Line Crossing' AND nama ILIKE '%masuk%')  AS crossing_masuk,
-          (SELECT COUNT(*) FROM reports WHERE event_type = 'Line Crossing' AND nama ILIKE '%keluar%') AS crossing_keluar
+          (SELECT COUNT(*) FROM reports WHERE nama ILIKE '%Crossing%') AS crossing,
+          (SELECT COUNT(*) FROM reports WHERE nama ILIKE '%Crossing%masuk%') AS crossing_masuk,
+          (SELECT COUNT(*) FROM reports WHERE nama ILIKE '%Crossing%keluar%') AS crossing_keluar
       `)
     ]);
 
@@ -396,6 +341,6 @@ io.on('connection', (socket) => {
 // START SERVER 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 SERVER JALAN DI http://192.168.21.21:${PORT}`);
-  console.log(`📊 Dashboard → http://192.168.21.21:${PORT}/dashboard\n`);
+  console.log(`🚀 SERVER JALAN DI http://${process.env.SERVER_IP}:${process.env.PORT}`)
+  console.log(`📊 Dashboard → http://192.168.11.63:${PORT}/dashboard\n`);
 });

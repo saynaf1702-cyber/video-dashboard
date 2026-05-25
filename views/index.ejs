@@ -3,27 +3,27 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CCTV Minimarket AI — Dashboard</title>
+  <title>CCTV AI Analytics — Dashboard</title>
   <script src="/socket.io/socket.io.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --bg:      #ffffff;
-      --surface: #ffffff;
-      --card:    #241a5b;
-      --border:  #007bff;
-      --accent:  #00d4ff;
-      --danger:  #ff3b3b;
-      --warn:    #ffaa00;
-      --safe:    #00e676;
-      --text:    #d0e8f5;
-      --muted:   #4a7090;
-      --mono:    'Share Tech Mono', monospace;
-      --display: 'Barlow Condensed', sans-serif;
-      --sans:    'Barlow', sans-serif;
-      --sidebar-w: 220px;
-    }
+  :root {
+    --bg:      #0d1117;
+    --surface: #0d1117;
+    --card:    #161b22;
+    --border:  #1e3a5f;
+    --accent:  #00d4ff;
+    --danger:  #ff3b3b;
+    --warn:    #ffaa00;
+    --safe:    #00e676;
+    --text:    #c9d1d9;
+    --muted:   #4a6a80;
+    --mono:    'Share Tech Mono', monospace;
+    --display: 'Barlow Condensed', sans-serif;
+    --sans:    'Barlow', sans-serif;
+    --sidebar-w: 220px;
+  }
 
     * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -179,6 +179,97 @@
     ::-webkit-scrollbar{width:4px;height:4px}
     ::-webkit-scrollbar-track{background:var(--surface)}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+    /* ── TOAST NOTIFICATION */
+    #toast-container {
+      position: fixed; top: 62px; right: 24px;
+      display: flex; flex-direction: column; gap: 10px;
+      z-index: 9999; pointer-events: none;
+    }
+    .toast {
+      display: flex; align-items: center; gap: 12px;
+      background: #1a0808; border: 1px solid rgba(255,59,59,.5);
+      border-radius: 6px; padding: 12px 16px; min-width: 280px; max-width: 340px;
+      font-family: var(--mono); font-size: .72rem;
+      pointer-events: all; cursor: pointer;
+      animation: toastIn .3s ease-out forwards;
+      position: relative; overflow: hidden;
+    }
+    .toast-icon { font-size: 16px; flex-shrink: 0; }
+    .toast-body { flex: 1; }
+    .toast-title { color: var(--danger); font-weight: 600; margin-bottom: 2px; letter-spacing: 1px; }
+    .toast-sub { color: var(--muted); font-size: .64rem; }
+    .toast-counter {
+      font-family: var(--display); font-size: 1.6rem; font-weight: 800;
+      color: var(--danger); line-height: 1; flex-shrink: 0;
+    }
+    .toast-bar {
+      position: absolute; bottom: 0; left: 0; height: 3px;
+      background: var(--danger); animation: toastBar 5s linear forwards;
+    }
+    #notif-badge {
+      display: none; position: relative;
+      background: rgba(255,59,59,.15); border: 1px solid rgba(255,59,59,.4);
+      border-radius: 4px; padding: 4px 12px;
+      font-family: var(--mono); font-size: .62rem; color: #ff8080;
+      cursor: pointer; letter-spacing: 1px; white-space: nowrap;
+      transition: all .2s;
+    }
+    #notif-badge:hover { background: rgba(255,59,59,.25); }
+    #notif-badge.all-read {
+      background: rgba(0,230,118,.1); border-color: rgba(0,230,118,.4);
+      color: var(--safe);
+    }
+
+    /* DROPDOWN REKAP */
+    #notif-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      width: 300px; background: #0d1117;
+      border: 1px solid rgba(255,59,59,.4); border-radius: 6px;
+      z-index: 9999; overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    }
+    #notif-dropdown.open { display: block; }
+    .dropdown-header {
+      padding: 10px 14px; background: rgba(255,59,59,.1);
+      border-bottom: 1px solid rgba(255,59,59,.2);
+      font-family: var(--mono); font-size: .62rem; color: #ff8080;
+      letter-spacing: 1px;
+    }
+    .dropdown-list { max-height: 260px; overflow-y: auto; }
+    .dropdown-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,.04);
+      font-family: var(--mono); font-size: .65rem;
+    }
+    .dropdown-item.unread { background: rgba(255,59,59,.06); }
+    .dropdown-item.read { opacity: .45; }
+    .dropdown-item-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--danger); flex-shrink: 0;
+    }
+    .dropdown-item.read .dropdown-item-dot { background: var(--muted); }
+    .dropdown-item-text { flex: 1; color: #ff8080; }
+    .dropdown-item-time { color: var(--muted); font-size: .6rem; }
+    .dropdown-footer {
+      padding: 9px 14px; text-align: center;
+      border-top: 1px solid rgba(255,59,59,.2);
+      font-family: var(--mono); font-size: .62rem;
+      color: var(--muted); cursor: pointer; letter-spacing: 1px;
+      transition: all .2s;
+    }
+    .dropdown-footer:hover { background: rgba(255,59,59,.1); color: #ff8080; }
+    .dropdown-empty {
+      padding: 20px; text-align: center;
+      font-family: var(--mono); font-size: .65rem; color: var(--muted);
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes toastBar {
+      from { width: 100%; } to { width: 0%; }
+    }
   </style>
 </head>
 <body>
@@ -187,18 +278,29 @@
 <header>
   <div class="logo">ISR Lab</div>
   <div class="header-sep"></div>
-  <span class="header-label">CCTV MINIMARKET AI</span>
+  <span class="header-label">CCTV AI ANALYTICS</span>
   <div class="live-dot">
     <div class="pulse"></div>
     <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">LIVE</span>
   </div>
   <span id="clock"></span>
+  <div id="notif-badge" onclick="toggleDropdown()">
+    🔔 Unread: <span id="badge-count">0</span>
+    <div id="notif-dropdown">
+      <div class="dropdown-header">⚠ UNKNOWN BELUM DIBACA</div>
+      <div class="dropdown-list" id="dropdown-list">
+        <div class="dropdown-empty">Belum ada notifikasi</div>
+      </div>
+      <div class="dropdown-footer" onclick="markAllRead(event)">✔ Tandai Semua Dibaca</div>
+    </div>
+  </div>
   <form method="POST" action="/logout" style="margin-left:16px;">
     <button type="submit" style="background:none;border:1px solid rgba(255,59,59,.3);color:#ff8080;font-family:var(--mono);font-size:.62rem;padding:4px 12px;border-radius:3px;cursor:pointer;letter-spacing:1px;">
       LOGOUT
     </button>
   </form>
 </header>
+<div id="toast-container"></div>
 
 <!-- BODY -->
 <div class="body-wrap">
@@ -257,13 +359,17 @@
             TC70-LabISR
           </span>
         </div>
-        <div style="background:#000; position:relative; line-height:0; width:100%;">
-          <iframe
+        <div style="background:#000; position:relative; width:100%; line-height:0;">
+          
+          <img
             src="<%= pythonUrl %>/video_feed"
             id="liveStream"
-            style="width:100%; height:100%; aspect-ratio:16/9; border:none; display:block;"
-          ></iframe>
-          <div style="position:absolute;top:10px;left:10px;background:rgba(8,12,16,.85);border:1px solid var(--danger);border-radius:3px;padding:4px 10px;display:flex;align-items:center;gap:6px;">
+            style="width:100%; height:auto; display:block;"
+            alt="Live Stream"
+          />
+
+          <!-- Badge REC -->
+          <div style="position:absolute;top:10px;left:10px;background:rgba(8,12,16,.85);border:1px solid var(--danger);border-radius:3px;padding:4px 10px;display:flex;align-items:center;gap:6px;z-index:10;">
             <div style="width:6px;height:6px;border-radius:50%;background:var(--danger);box-shadow:0 0 6px var(--danger);animation:blink 1s infinite;"></div>
             <span style="font-family:var(--mono);font-size:.65rem;color:var(--danger);letter-spacing:2px;">REC</span>
           </div>
@@ -289,14 +395,6 @@
               <div class="stat w">
                 <div class="stat-label">Line Crossing</div>
                 <div class="stat-val" id="ov-crossing"><%= stats.crossing || 0 %></div>
-                <div style="display:flex;gap:16px;margin-top:4px;">
-                  <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">
-                    Masuk: <span style="color:var(--safe);" id="ov-masuk"><%= stats.crossing_masuk || 0 %></span>
-                  </span>
-                  <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">
-                    Keluar: <span style="color:var(--danger);" id="ov-keluar"><%= stats.crossing_keluar || 0 %></span>
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -374,13 +472,17 @@
                 <tr><td colspan="4" class="empty">BELUM ADA ANOMALI</td></tr>
               <% } else { %>
                 <% anomaliData.forEach(row => { %>
+                  <% const clipTime = new Date(row.created_at).toLocaleString('id-ID'); %>
                   <tr id="det-<%= row.id %>">
                     <td style="font-family:var(--mono);color:var(--muted);">#<%= row.id %></td>
-                    <td style="font-family:var(--mono);font-size:.72rem;"><%= new Date(row.created_at).toLocaleString('id-ID') %></td>
+                    <td style="font-family:var(--mono);font-size:.72rem;"><%= clipTime %></td>
                     <td><span class="tag tag-red">⚠ ANOMALI</span></td>
                     <td>
                       <% if(row.image_path && row.image_path !== '') { %>
-                        <button class="btn-play clip-ready" onclick="playVideo('<%= row.image_path %>')">▶ Lihat Clip</button>
+                        <button class="btn-play clip-ready" 
+                          onclick="playVideo('<%= row.image_path %>', '<%= row.id %>', '<%= clipTime %>')">
+                          ▶ Lihat Clip
+                        </button>
                       <% } else { %>
                         <button class="btn-play" id="btn-<%= row.id %>" disabled>⏳ Diproses...</button>
                       <% } %>
@@ -418,9 +520,6 @@
                   </div>
                   <div class="vod-detail"><%= new Date(rec.created_at).toLocaleString('id-ID') %></div>
                   <div class="vod-footer">
-                    <span class="tag <%= rec.synced ? 'tag-green' : 'tag-yellow' %>">
-                      <%= rec.synced ? '☁ SYNCED' : '⏳ PENDING' %>
-                    </span>
                     <button class="btn-del" data-id="<%= rec.id %>" onclick="deleteRecording(this.dataset.id)">HAPUS</button>
                   </div>
                 </div>
@@ -436,6 +535,95 @@
 
 <script>
   const socket = io();
+  // ── Toast & Read/Unread System (khusus Unknown)
+  let unreadCount = 0;
+  let notifLog = []; // { id, timeStr, read }
+
+  function showToast(name, timeStr) {
+    if (name && name !== 'Unknown') return;
+
+    const notif = { id: Date.now(), timeStr, read: false };
+    notifLog.unshift(notif);
+    unreadCount++;
+    updateBadge();
+    renderDropdown();
+
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `
+      <span class="toast-icon">🔔</span>
+      <div class="toast-body">
+        <div class="toast-title">⚠ Unknown terdeteksi</div>
+        <div class="toast-sub">${timeStr}</div>
+      </div>
+      <div class="toast-counter">${unreadCount}</div>
+      <div class="toast-bar"></div>
+    `;
+    toast.onclick = () => toast.remove();
+    container.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5200);
+  }
+
+  function renderDropdown() {
+    const list = document.getElementById('dropdown-list');
+    if (notifLog.length === 0) {
+      list.innerHTML = '<div class="dropdown-empty">Belum ada notifikasi</div>';
+      return;
+    }
+    list.innerHTML = notifLog.map(n => `
+      <div class="dropdown-item ${n.read ? 'read' : 'unread'}">
+        <div class="dropdown-item-dot"></div>
+        <div class="dropdown-item-text">⚠ Unknown terdeteksi</div>
+        <div class="dropdown-item-time">${n.timeStr}</div>
+      </div>
+    `).join('');
+  }
+
+  function toggleDropdown() {
+    const dropdown = document.getElementById('notif-dropdown');
+    dropdown.classList.toggle('open');
+
+    // Tutup kalau klik di luar
+    if (dropdown.classList.contains('open')) {
+      setTimeout(() => {
+        document.addEventListener('click', closeDropdownOutside, { once: true });
+      }, 0);
+    }
+  }
+
+  function closeDropdownOutside(e) {
+    const badge = document.getElementById('notif-badge');
+    if (!badge.contains(e.target)) {
+      document.getElementById('notif-dropdown').classList.remove('open');
+    }
+  }
+
+  function updateBadge() {
+    const badge = document.getElementById('notif-badge');
+    if (unreadCount > 0) {
+      badge.style.display = 'block';
+      badge.classList.remove('all-read');
+      // Ganti hanya teks, jangan innerHTML karena ada dropdown di dalamnya
+      badge.childNodes[0].textContent = `🔔 Unread: `;
+      document.getElementById('badge-count').textContent = unreadCount;
+    } else {
+      badge.classList.add('all-read');
+      badge.childNodes[0].textContent = '✔ Semua dibaca ';
+      document.getElementById('badge-count').textContent = '';
+      setTimeout(() => { badge.style.display = 'none'; }, 2000);
+    }
+  }
+
+  function markAllRead(e) {
+    if (e) e.stopPropagation(); // cegah toggleDropdown terpanggil lagi
+    notifLog.forEach(n => n.read = true);
+    unreadCount = 0;
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    document.getElementById('notif-dropdown').classList.remove('open');
+    renderDropdown();
+    updateBadge();
+  }
 
   // ── Clock
   setInterval(() => {
@@ -475,19 +663,33 @@
   }
 
   // ── Play video di alert banner
-  function playVideo(src) {
+  function playVideo(src, clipId, clipTime) {  // ← ganti nama parameter
+    console.log('playVideo dipanggil:', src, clipId, clipTime);
     if (!src || src === '') return;
+    
     const detNav = document.querySelectorAll('.nav-item')[2];
     switchPage(detNav, 'pg-detections');
 
     const banner  = document.getElementById('alertBanner');
     const video   = document.getElementById('alertVideo');
     const waiting = document.getElementById('bannerWaiting');
+    
     banner.style.display  = 'block';
-    video.style.display   = 'block';
     waiting.style.display = 'none';
+    video.style.display   = 'block';
+
+    document.getElementById('bannerBadge').textContent  = clipId ? `#${clipId}` : '—';
+    document.getElementById('bannerDetail').textContent = clipTime ? `⚠ ANOMALI TERDETEKSI | ${clipTime}` : '—';
+    
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
     video.src = src;
-    video.play();
+    video.load();
+    video.oncanplay = () => {
+      video.play().catch(e => console.log('Autoplay blocked:', e));
+    };
+    
     banner.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -510,6 +712,9 @@
 
     // 1. Notif sidebar
     addNotif(data.nama, data.event_type, timeStr);
+    if (!data.nama || data.nama === 'Unknown') {
+      showToast(data.nama, timeStr);
+    }
 
     // 2. Tabel Overview
     const tbody = document.getElementById('recentBody');
@@ -545,15 +750,15 @@
 
     if (isAnomali) {
       // 4. Alert banner
-      const banner  = document.getElementById('alertBanner');
-      const video   = document.getElementById('alertVideo');
-      const waiting = document.getElementById('bannerWaiting');
-      banner.style.display  = 'block';
-      video.style.display   = 'none';
-      waiting.style.display = 'block';
-      document.getElementById('bannerBadge').textContent  = data.nama || 'Unknown';
-      document.getElementById('bannerDetail').textContent = `⚠ ANOMALI TERDETEKSI | ${fullTime}`;
-      setTimeout(() => { banner.style.display = 'none'; }, 15000);
+      //const banner  = document.getElementById('alertBanner');
+      //const video   = document.getElementById('alertVideo');
+      //const waiting = document.getElementById('bannerWaiting');
+      //banner.style.display  = 'block';
+      //video.style.display   = 'none';
+      //waiting.style.display = 'block';
+      //document.getElementById('bannerBadge').textContent  = data.nama || 'Unknown';
+      //document.getElementById('bannerDetail').textContent = `⚠ ANOMALI TERDETEKSI | ${fullTime}`;
+      //setTimeout(() => { banner.style.display = 'none'; }, 15000);
 
       // 5. Baris tabel Deteksi
       const detBody = document.getElementById('detBody');
@@ -568,7 +773,7 @@
           <td style="font-family:var(--mono);font-size:.72rem;">${fullTime}</td>
           <td><span class="tag tag-red">⚠ ANOMALI</span></td>
           <td>${hasClip
-            ? `<button class="btn-play clip-ready" onclick="playVideo('${data.image_path}')">▶ Lihat Clip</button>`
+            ? `<button class="btn-play clip-ready" onclick="playVideo('${data.image_path}', '${data.id}', '${fullTime}')">▶ Lihat Clip</button>`
             : `<button class="btn-play" id="btn-${data.id}" disabled>⏳ Diproses...</button>`}
           </td>
         `;
@@ -607,8 +812,8 @@
       btn.disabled    = false;
       btn.className   = 'btn-play clip-ready';
       btn.textContent = '▶ Lihat Clip';
-      btn.setAttribute('onclick', `playVideo('${data.clip_url}')`);
-    }
+      btn.setAttribute('onclick', `playVideo('${data.clip_url}', '${data.id}', '${new Date().toLocaleString('id-ID')}')`);
+  }
     const banner  = document.getElementById('alertBanner');
     const video   = document.getElementById('alertVideo');
     const waiting = document.getElementById('bannerWaiting');
@@ -622,6 +827,7 @@
 
   // ── Socket: rekaman baru masuk VOD
   socket.on('new-recording', (data) => {
+    if (data.is_clip) return;
     ['s-rec', 'ls-rec'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = parseInt(el.textContent || 0) + 1;
@@ -645,7 +851,6 @@
           </div>
           <div class="vod-detail">${new Date().toLocaleString('id-ID')}</div>
           <div class="vod-footer">
-            <span class="tag tag-yellow">⏳ PENDING</span>
             <button class="btn-del" onclick="deleteRecording(${data.id})">HAPUS</button>
           </div>
         </div>
