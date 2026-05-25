@@ -63,9 +63,10 @@ This system can be applied to various environments that require CCTV-based AI su
 
 ## 🏗️ System Architecture
 
+```
 CCTV Camera (192.168.9.187)
-│ RTSP
-▼
+    │ RTSP
+    ▼
 Python AI Edge Device — NVIDIA Jetson (192.168.11.88)
 ├── Frigate         → Video Stream Management
 ├── YOLOv11         → Object & People Detection
@@ -73,21 +74,22 @@ Python AI Edge Device — NVIDIA Jetson (192.168.11.88)
 ├── Line Crossing   → Security Violation Detection
 ├── Flask Server    → MJPEG Stream + REST API
 └── Frame Buffer    → Clip Recording
-│ HTTP API
-▼
-Node.js Backend Server — Mini PC (192.168.11.63) [this repo]
+    │ HTTP API
+    ▼
+Node.js Backend Server — Mini PC (192.168.11.63)
 ├── REST API        → Receive detections from Python
 ├── PostgreSQL      → Store reports & recordings
 ├── Socket.io       → Push updates to dashboard
 ├── Video Proxy     → Bridge clip access from Jetson to browser
 └── Dashboard UI    → Real-time monitoring (EJS)
-│ Port 3000
-▼
+    │ Port 3000
+    ▼
 Browser Dashboard
----
+```
 
 ## 🗄️ Database Schema
 
+```
 reports
 ├── id (PK)
 ├── event_type      → Terdeteksi / Anomali / Line Crossing
@@ -96,6 +98,7 @@ reports
 ├── image_path      → Proxy URL of anomaly clip
 ├── status          → pending (default)
 └── created_at
+
 recordings
 ├── id (PK)
 ├── detection_id    → FK → reports.id
@@ -107,7 +110,7 @@ recordings
 ├── synced          → Cloud sync status (future feature)
 ├── is_clip         → TRUE (anomaly clip) / FALSE (VOD)
 └── created_at
----
+```
 
 ## 📁 Project Structure
 
@@ -260,8 +263,23 @@ Python Flask streams MJPEG → Browser accesses via Python URL → Displayed on 
 
 ## 📸 Screenshots
 
-![Login Page](dashboard/login.png)
-![Dashboard](dashboard/dashboard.png)
+### Login
+![Login](dashboard/login.png)
+
+### Live Stream
+![Live Stream](dashboard/livestream.png)
+
+### Overview
+![Overview](dashboard/overview.png)
+
+### Deteksi Anomali
+![Deteksi](dashboard/deteksi.png)
+
+### Rekaman VOD
+![VOD](dashboard/vod.png)
+
+### Notifikasi
+![Notifikasi](dashboard/notifikasi.png)
 
 ---
 
