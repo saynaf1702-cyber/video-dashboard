@@ -21,3 +21,4 @@ pgdata/
 add-user.js
 resetpw.js
 hash-password.js
+cleanup.log

@@ -2,7 +2,7 @@
 echo "=== Cleanup dimulai: $(date) ==="
 
 # 1. Hapus file .mp4 rekaman penuh lebih dari 5 hari
-find /home/isrdds/video-dashboard/recordings -name "*.mp4" -mtime +5 -delete
+sudo find /home/isrdds/video-dashboard/recordings -name "*.mp4" -mtime +5 -delete
 echo "✅ File rekaman VOD > 5 hari dihapus"
 
 # 2. Hapus data rekaman VOD di database lebih dari 5 hari
